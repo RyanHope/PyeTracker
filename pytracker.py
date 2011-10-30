@@ -104,15 +104,12 @@ class PyeTracker(QMainWindow):
         self.statsLines = QLabel('NA')
         self.statsComments = QLabel('NA')
         self.statsPercentGood = QLabel('NA')
-        self.statsSegments = QLabel('NA')
         stats.addWidget(QLabel('Lines:'),0,0)
         stats.addWidget(self.statsLines,0,1)
         stats.addWidget(QLabel('Comments:'),1,0)
         stats.addWidget(self.statsComments,1,1)
         stats.addWidget(QLabel('Percent Good:'),2,0)
         stats.addWidget(self.statsPercentGood,2,1)
-        stats.addWidget(QLabel('Segments:'),3,0)
-        stats.addWidget(self.statsSegments,3,1)
         layout2.addLayout(stats)
         self.statsGroupBox.setLayout(layout2)
 
@@ -204,7 +201,6 @@ class PyeTracker(QMainWindow):
         self.timestampComboBox.setCurrentIndex(0)
         self.statsPercentGood.setText('NA')
         self.statsLines.setText('NA')
-        self.statsSegments.setText('NA')
         self.statsComments.setText('NA')
 
     def openFile(self):
