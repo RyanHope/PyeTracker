@@ -30,7 +30,7 @@ class PyeTracker(QMainWindow):
         self.setStatusBar(QStatusBar())
         self.setStatusbarMessage('Ready')
 
-        self.header = []
+        self.header = None
 
         self.metrics = QFontMetrics(QApplication.font())
 
@@ -136,6 +136,7 @@ class PyeTracker(QMainWindow):
         self.parsingGroupBox.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
         layout2 = QVBoxLayout()
         self.headerCheckBox = QCheckBox('First Row Header')
+        QObject.connect(self.headerCheckBox, SIGNAL('stateChanged(int)'), self.refreshDataTable)
         self.delimTabCheckBox = QCheckBox('Tab Delim')
         self.delimTabCheckBox.setCheckState(Qt.CheckState.Checked)
         self.delimSpaceCheckBox = QCheckBox('Space Delim')
@@ -165,7 +166,7 @@ class PyeTracker(QMainWindow):
         layout2.addLayout(layout3)
         self.reparseButton = QPushButton('Re-parse Data')
         self.reparseButton.setEnabled(False)
-        QObject.connect(self.reparseButton, SIGNAL('clicked()'), self.refreshDataTable)
+        QObject.connect(self.reparseButton, SIGNAL('clicked()'), self.parseData)
         layout2.addWidget(self.reparseButton)
         self.parsingGroupBox.setLayout(layout2)
 
@@ -189,7 +190,9 @@ class PyeTracker(QMainWindow):
         return action
 
     def closeFile(self):
-        self.origdata = []
+        self.origdata = None
+        self.data = None
+        self.header = None
         self.datatableModel = DataModel()
         self.datatable.setModel(self.datatableModel)
         self.datatable.horizontalHeader().setVisible(False)
@@ -219,16 +222,15 @@ class PyeTracker(QMainWindow):
                     self.origdata = tmp
                     break
             f.close()
-            self.refreshDataTable()
+            self.parseData()
             self.reparseButton.setEnabled(True)
             self.closeAction.setEnabled(True)
 
-    def refreshDataTable(self):
+    def parseData(self):
         if not self.origdata:
             return
         self.updateProgress(0, 1, 'Parsing eye gaze data...')
         self.data = []
-        oldheader = self.header
         comments = 0
         firstNonComment = False
         cleanup = None
@@ -262,27 +264,37 @@ class PyeTracker(QMainWindow):
             self.data.append(line)
         self.statsLines.setText(str(len(self.origdata)))
         self.statsComments.setText(str(comments))
-        self.datatable.horizontalHeader().setVisible(True)
-        if self.headerCheckBox.checkState() == Qt.CheckState.Checked:
-            self.header = self.data[0]
-            self.data = self.data[1:]
-        else:
-            self.header = ['Column %d'%i for i in range(1,len(self.data[0])+1)]
-        self.datatableModel = DataModel(self.data,self.header)
-        self.datatable.setModel(self.datatableModel)
-        self.datatable.setShowGrid(True)
-        if oldheader != self.header:
-            self.updateComboBox(self.statusComboBox)
-            self.updateComboBox(self.gazexComboBox)
-            self.updateComboBox(self.gazeyComboBox)
-            self.updateComboBox(self.timestampComboBox)
         self.setStatusbarMessage('Finished')
         self.pb.hide()
+        self.refreshDataTable()
 
-    def updateComboBox(self, cb):
+    def refreshDataTable(self):
+        if not self.data:
+            return
+        self.datatable.horizontalHeader().setVisible(True)
+        self.datatable.setShowGrid(True)
+        oldheader = self.header
+        header = ['Column %d'%i for i in range(1,len(self.data[0])+1)]
+        if self.headerCheckBox.checkState() == Qt.CheckState.Checked:
+            self.header = self.data[0]
+            header = self.header
+            self.data = self.data[1:]
+        else:
+            if self.header:
+                self.data.insert(0,self.header)
+                self.header = None
+        self.datatableModel = DataModel(self.data,header)
+        self.datatable.setModel(self.datatableModel)
+        if oldheader != header:
+            self.updateComboBox(self.statusComboBox, header)
+            self.updateComboBox(self.gazexComboBox, header)
+            self.updateComboBox(self.gazeyComboBox, header)
+            self.updateComboBox(self.timestampComboBox, header)
+
+    def updateComboBox(self, cb, header):
         cb.clear()
         cb.addItem('')
-        for h in self.header:
+        for h in header:
             cb.addItem(h)
 
 if __name__ == '__main__':
