@@ -5,42 +5,8 @@ import sys, os, re
 from PySide.QtCore import *
 from PySide.QtGui import *
 
-class DataModel(QAbstractTableModel): 
-
-    def __init__(self, datain=[], headerdata=[], parent=None):
-        super(DataModel, self).__init__(parent)
-
-        self.arraydata = datain
-        self.headerdata = headerdata
-
-    def rowCount(self, parent):
-        if self.arraydata:
-            return len(self.arraydata)
-        else:
-            return 0
-
-    def columnCount(self, parent):
-        if self.arraydata:
-            return len(self.arraydata[0])
-        else:
-            return 0 
-
-    def data(self, index, role):
-        if not index.isValid(): 
-            return None
-        if not 0 <= index.row() < len(self.arraydata):
-            return None
-        elif role != Qt.DisplayRole: 
-            return None
-        return self.arraydata[index.row()][index.column()]
-
-    def headerData(self, col, orientation, role):
-        try:
-            if self.headerdata and orientation == Qt.Horizontal and role == Qt.DisplayRole:
-                return self.headerdata[col]
-        except IndexError:
-            pass
-        return None
+from about import AboutDlg
+from datamodel import DataModel
 
 class PyeTracker(QMainWindow):
 
@@ -57,6 +23,9 @@ class PyeTracker(QMainWindow):
         self.fileMenu.addSeparator()
         self.openAction = self.createAction("E&xit", self.fileMenu, self.close)        
         self.menuBar.addMenu(self.fileMenu)
+        self.helpMenu = QMenu("&Help", self)
+        self.helpAction = self.createAction("&About", self.helpMenu, self.about)
+        self.menuBar.addMenu(self.helpMenu)
 
         self.setStatusBar(QStatusBar())
         self.setStatusbarMessage('Ready')
@@ -94,6 +63,7 @@ class PyeTracker(QMainWindow):
         self.statusBar().addPermanentWidget(self.pb)
 
         self.setWindowTitle("PyeTracker")
+        self.setWindowIcon(QIcon('logo.png'))
 
         self.show()
 
@@ -107,6 +77,9 @@ class PyeTracker(QMainWindow):
         self.pb.setValue(n)
         if message:
             self.setStatusbarMessage(message)
+            
+    def about(self):
+        AboutDlg(self)
 
     def setStatusbarMessage(self, message):
         self.statusBar().showMessage(message)
@@ -248,7 +221,7 @@ class PyeTracker(QMainWindow):
             f.close()
             self.refreshDataTable()
             self.reparseButton.setEnabled(True)
-            self.closeAction.setEnabled(Trye)
+            self.closeAction.setEnabled(True)
 
     def refreshDataTable(self):
         if not self.origdata:
