@@ -2,41 +2,63 @@ from PySide.QtCore import QAbstractTableModel, Qt
 
 class DataModel(QAbstractTableModel): 
 
-    def __init__(self, datain=[], headerdata=[], parent=None):
+    def __init__(self, datain=[], firstRowAsHeader=False, parent=None):
         super(DataModel, self).__init__(parent)
 
+        self.firstRowAsHeader = firstRowAsHeader
         self.arraydata = datain
-        self.headerdata = headerdata
+        self.headerdata = ['Column %d'%i for i in range(1,len(self.arraydata[0])+1)]
 
-    def rowCount(self, parent):
+    def rowCount(self, parent=None):
         if self.arraydata:
-            return len(self.arraydata)
+            if self.firstRowAsHeader:
+                return len(self.arraydata)-1
+            else:
+                return len(self.arraydata)
         else:
             return 0
 
-    def columnCount(self, parent):
+    def columnCount(self, parent=None):
         if self.arraydata:
             return len(self.arraydata[0])
         else:
-            return 0 
+            return 0
+
+    def getHeader(self):
+        if self.firstRowAsHeader:
+            return self.arraydata[0]
+        else:
+            return self.headerdata
+
+    def getData(self):
+        if self.firstRowAsHeader:
+            return self.arraydata[1:]
+        else:
+            return self.arraydata
 
     def data(self, index, role):
         if not index.isValid(): 
             return None
-        if not 0 <= index.row() < len(self.arraydata):
+        if not 0 <= index.row() < self.rowCount():
             return None
-        elif role != Qt.DisplayRole: 
+        if role != Qt.DisplayRole: 
             return None
         try:
-            return self.arraydata[index.row()][index.column()]
+            if self.firstRowAsHeader:
+                return self.arraydata[index.row()+1][index.column()]
+            else:
+                return self.arraydata[index.row()][index.column()]
         except IndexError:
             pass
         return None
 
     def headerData(self, col, orientation, role):
         try:
-            if self.headerdata and orientation == Qt.Horizontal and role == Qt.DisplayRole:
-                return self.headerdata[col]
+            if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+                if self.firstRowAsHeader:
+                    return self.arraydata[0][col]
+                else:
+                    return self.headerdata[col]
         except IndexError:
             pass
         return None

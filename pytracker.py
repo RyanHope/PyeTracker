@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import sys, os, re
+import sys, os, re, copy
 
 from PySide.QtCore import *
 from PySide.QtGui import *
 
-from about import AboutDlg
+from dialogs import AboutDlg, ColumnValueFilter
 from datamodel import DataModel
 
 class PyeTracker(QMainWindow):
@@ -23,6 +23,14 @@ class PyeTracker(QMainWindow):
         self.fileMenu.addSeparator()
         self.openAction = self.createAction("E&xit", self.fileMenu, self.close)        
         self.menuBar.addMenu(self.fileMenu)
+
+        self.dataMenu = QMenu("&Data", self)
+        self.filterByColumnValueAction = self.createAction("Filter by &column value...", self.dataMenu, self.filterByColumnValue)
+        self.filterByColumnValueAction.setEnabled(True)
+        self.dataMenu.addSeparator()
+        self.undoAllAction = self.createAction("&Undo all filters", self.dataMenu, self.undoFilters)
+        self.menuBar.addMenu(self.dataMenu)
+
         self.helpMenu = QMenu("&Help", self)
         self.helpAction = self.createAction("&About", self.helpMenu, self.about)
         self.menuBar.addMenu(self.helpMenu)
@@ -34,7 +42,7 @@ class PyeTracker(QMainWindow):
 
         self.metrics = QFontMetrics(QApplication.font())
 
-        self.origdata = self.data = None
+        self.rawdata = self.data = None
 
         layout0 = QHBoxLayout()
         self.createDataTable()               
@@ -71,6 +79,14 @@ class PyeTracker(QMainWindow):
         size = self.geometry()
         self.move((screen.width()-size.width())/2, (screen.height()-size.height())/2)
 
+    def filterByColumnValue(self):
+        ColumnValueFilter(self)
+
+    def undoFilters(self):
+        if self.origdata:
+            self.data = copy.copy(self.origdata)
+            self.refreshDataTable()
+
     def updateProgress(self, n, nrows, message=None):
         self.pb.show()
         self.pb.setRange(0, nrows)
@@ -88,9 +104,8 @@ class PyeTracker(QMainWindow):
         self.dataTableGroupBox = QGroupBox("Gaze Data")
         self.dataTableGroupBox.setMinimumWidth(500)
         layout1 = QHBoxLayout()
-        self.datatableModel = DataModel()
+        self.datatableModel = None
         self.datatable = QTableView()
-        self.datatable.setModel(self.datatableModel)
         self.datatable.verticalHeader().setVisible(False)
         layout1.addWidget(self.datatable)        
         self.dataTableGroupBox.setLayout(layout1)
@@ -117,6 +132,10 @@ class PyeTracker(QMainWindow):
         self.columnGroupBox = QGroupBox("Column Type")
         self.columnGroupBox.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum)
         layout3 = QGridLayout()
+        self.statusComboBox = QComboBox()
+        self.gazexComboBox = QComboBox()
+        self.gazeyComboBox = QComboBox()
+        self.timestampComboBox = QComboBox()
         layout3.addWidget(QLabel('Status:'),2,0)
         layout3.addWidget(self.statusComboBox,2,1)
         layout3.addWidget(QLabel('Gaze X:'),3,0)
@@ -139,10 +158,6 @@ class PyeTracker(QMainWindow):
         self.delimSpaceCheckBox = QCheckBox('Space Delim')
         self.delimSpaceCheckBox.setCheckState(Qt.CheckState.Checked)
         self.delimCommaCheckBox = QCheckBox('Comma Delim')
-        self.statusComboBox = QComboBox()
-        self.gazexComboBox = QComboBox()
-        self.gazeyComboBox = QComboBox()
-        self.timestampComboBox = QComboBox()
         layout3 = QGridLayout()
         layout3.addWidget(QLabel('Comment Char:'),0,0)
         self.commentLineEdit = QLineEdit('#')
@@ -187,7 +202,7 @@ class PyeTracker(QMainWindow):
         return action
 
     def closeFile(self):
-        self.origdata = None
+        self.rawdata = None
         self.data = None
         self.header = None
         self.datatableModel = DataModel()
@@ -202,6 +217,7 @@ class PyeTracker(QMainWindow):
         self.statsPercentGood.setText('NA')
         self.statsLines.setText('NA')
         self.statsComments.setText('NA')
+        self.filterByColumnValueAction.setEnabled(False)
 
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, 'Open file')
@@ -215,15 +231,16 @@ class PyeTracker(QMainWindow):
                 if (l>1):
                     if not tmp[l-1]:
                         del tmp[l-1]
-                    self.origdata = tmp
+                    self.rawdata = tmp
                     break
             f.close()
             self.parseData()
             self.reparseButton.setEnabled(True)
             self.closeAction.setEnabled(True)
+            self.filterByColumnValueAction.setEnabled(True)
 
     def parseData(self):
-        if not self.origdata:
+        if not self.rawdata:
             return
         self.updateProgress(0, 1, 'Parsing eye gaze data...')
         self.data = []
@@ -232,7 +249,7 @@ class PyeTracker(QMainWindow):
         cleanup = None
         if self.cleanupLineEdit.text():
             cleanup = self.cleanupLineEdit.text()
-        lines = len(self.origdata)
+        lines = len(self.rawdata)
         delims = []
         if self.delimTabCheckBox.checkState() == Qt.CheckState.Checked:
             delims.append('\t')
@@ -248,7 +265,7 @@ class PyeTracker(QMainWindow):
             r = '(?=\b|%s?)(%s[^%s]*%s|[^%s]*)(?=\b|%s?)' % (r1,q1,q1,q2,r2,r1)
             reg1 = re.compile(r)
             reg2 = re.compile('|'.join([q1,q2]))
-        for i, line in enumerate(self.origdata):
+        for i, line in enumerate(self.rawdata):
             self.updateProgress(i+1, lines, 'Parsing eye gaze data...')
             if re.match('^'+self.commentLineEdit.text(),line):
                 comments += 1
@@ -258,34 +275,32 @@ class PyeTracker(QMainWindow):
             if delims:
                 line = [reg2.sub('',l) for l in filter(None,reg1.findall(line))]
             self.data.append(line)
-        self.statsLines.setText(str(len(self.origdata)))
+        self.statsLines.setText(str(len(self.rawdata)))
         self.statsComments.setText(str(comments))
         self.setStatusbarMessage('Finished')
         self.pb.hide()
+        self.origdata = copy.copy(self.data)
         self.refreshDataTable()
 
     def refreshDataTable(self):
         if not self.data:
             return
+        if self.headerCheckBox.checkState() == Qt.CheckState.Checked:
+            self.datatableModel = DataModel(self.data, True)
+        else:
+            self.datatableModel = DataModel(self.data, False)
+        self.datatable.setModel(self.datatableModel)
         self.datatable.horizontalHeader().setVisible(True)
         self.datatable.setShowGrid(True)
-        oldheader = self.header
-        header = ['Column %d'%i for i in range(1,len(self.data[0])+1)]
-        if self.headerCheckBox.checkState() == Qt.CheckState.Checked:
-            self.header = self.data[0]
-            header = self.header
-            self.data = self.data[1:]
-        else:
-            if self.header:
-                self.data.insert(0,self.header)
-                self.header = None
-        self.datatableModel = DataModel(self.data,header)
-        self.datatable.setModel(self.datatableModel)
-        if oldheader != header:
+        self.datatable.resizeColumnsToContents()
+
+        header = self.datatableModel.getHeader()
+        if self.header != header:
             self.updateComboBox(self.statusComboBox, header)
             self.updateComboBox(self.gazexComboBox, header)
             self.updateComboBox(self.gazeyComboBox, header)
             self.updateComboBox(self.timestampComboBox, header)
+        self.header = header
 
     def updateComboBox(self, cb, header):
         cb.clear()
