@@ -27,7 +27,11 @@ class DataModel(QAbstractTableModel):
             return None
         elif role != Qt.DisplayRole: 
             return None
-        return self.arraydata[index.row()][index.column()]
+        try:
+            return self.arraydata[index.row()][index.column()]
+        except IndexError:
+            pass
+        return None
 
     def headerData(self, col, orientation, role):
         try:
