@@ -55,6 +55,7 @@ class ColumnValueFilter(QDialog):
         self.parent.pb.hide()
         self.parent.data = newdata
         self.parent.refreshDataTable()
+        self.parent.undoAllAction.setEnabled(True)
         self.close()
     
     def valueChanged(self, index):

@@ -26,9 +26,10 @@ class PyeTracker(QMainWindow):
 
         self.dataMenu = QMenu("&Data", self)
         self.filterByColumnValueAction = self.createAction("Filter by &column value...", self.dataMenu, self.filterByColumnValue)
-        self.filterByColumnValueAction.setEnabled(True)
+        self.filterByColumnValueAction.setEnabled(False)
         self.dataMenu.addSeparator()
         self.undoAllAction = self.createAction("&Undo all filters", self.dataMenu, self.undoFilters)
+        self.undoAllAction.setEnabled(False)
         self.menuBar.addMenu(self.dataMenu)
 
         self.helpMenu = QMenu("&Help", self)
@@ -43,29 +44,23 @@ class PyeTracker(QMainWindow):
         self.metrics = QFontMetrics(QApplication.font())
 
         self.rawdata = self.data = None
-
-        layout0 = QHBoxLayout()
-        self.createDataTable()               
-        layout0.addWidget(self.dataTableGroupBox)
-
-        layout1 = QVBoxLayout()
-        layout1.setAlignment(Qt.AlignTop)
-        self.createParsingOptionsGroup()
-        layout1.addWidget(self.parsingGroupBox)
-        self.createColumnGroup()
-        layout1.addWidget(self.columnGroupBox)
-        self.createStatsGroup()
-        layout1.addWidget(self.statsGroupBox)
-        layout0.addLayout(layout1)
-
-        mainLayout = QVBoxLayout()
-        mainLayout.setMenuBar(self.menuBar)
-        mainLayout.addLayout(layout0)
-
+        
+        mainLayout = QGridLayout()
         self.mainWidget = QWidget()
         self.mainWidget.setLayout(mainLayout)
+
+        self.createDataTable()                       
+        mainLayout.addWidget(self.dataTableGroupBox,0,0)
+        self.createParsingOptionsGroup()
+        mainLayout.addWidget(self.parsingGroupBox,0,1)
+        self.createStatsGroup()
+        mainLayout.addWidget(self.statsGroupBox,1,1)
+        self.createColumnGroup()
+        mainLayout.addWidget(self.columnGroupBox,1,0)
+
         self.setCentralWidget(self.mainWidget)
 
+        self.setMenuBar(self.menuBar)
         self.pb = QProgressBar(self.statusBar())
         self.pb.hide()
         self.statusBar().addPermanentWidget(self.pb)
@@ -74,6 +69,7 @@ class PyeTracker(QMainWindow):
         self.setWindowIcon(QIcon('logo.png'))
 
         self.show()
+        self.parsingGroupBox.setMinimumWidth(self.parsingGroupBox.width())
 
         screen = QDesktopWidget().screenGeometry()
         size = self.geometry()
@@ -112,8 +108,7 @@ class PyeTracker(QMainWindow):
 
     def createStatsGroup(self):
         self.statsGroupBox = QGroupBox("Gaze Data Stats")
-        self.statsGroupBox.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum)
-
+        #self.statsGroupBox.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum)
         layout2 = QVBoxLayout()
         stats = QGridLayout()
         self.statsLines = QLabel('NA')
@@ -130,27 +125,39 @@ class PyeTracker(QMainWindow):
 
     def createColumnGroup(self):
         self.columnGroupBox = QGroupBox("Column Type")
-        self.columnGroupBox.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum)
+        #self.columnGroupBox.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum)
         layout3 = QGridLayout()
         self.statusComboBox = QComboBox()
+        #self.statusComboBox.setMinimumWidth(self.metrics.width('Z')*16)
         self.gazexComboBox = QComboBox()
         self.gazeyComboBox = QComboBox()
         self.timestampComboBox = QComboBox()
+        self.comparisonComboBox = QComboBox()
+        self.trialComboBox = QComboBox()
+        self.comparisonValue = QLineEdit()
+        #self.comparisonValue.setFixedWidth(self.metrics.width('Z')*4)
+        self.comparisonComboBox.addItems(['==','<','<=','>','>='])
+        #self.comparisonComboBox.setFixedWidth(self.metrics.width('Z')*6)
         layout3.addWidget(QLabel('Status:'),2,0)
-        layout3.addWidget(self.statusComboBox,2,1)
-        layout3.addWidget(QLabel('Gaze X:'),3,0)
-        layout3.addWidget(self.gazexComboBox,3,1)
-        layout3.addWidget(QLabel('Gaze Y:'),4,0)
-        layout3.addWidget(self.gazeyComboBox,4,1)
-        layout3.addWidget(QLabel('Timestamp:'),5,0)
-        layout3.addWidget(self.timestampComboBox,5,1)
+        layout3.addWidget(self.statusComboBox,2,1,1,2)
+        layout3.addWidget(self.comparisonComboBox,2,3)
+        layout3.addWidget(self.comparisonValue,2,4,1,2)
+        layout3.addWidget(QLabel('Gaze X:'),3,0,)
+        layout3.addWidget(self.gazexComboBox,3,1,1,2)
+        layout3.addWidget(QLabel('Gaze Y:'),3,3)
+        layout3.addWidget(self.gazeyComboBox,3,4,1,2)
+        layout3.addWidget(QLabel('Timestamp:'),4,0)
+        layout3.addWidget(self.timestampComboBox,4,1,1,2)
+        layout3.addWidget(QLabel('Trial:'),4,3)
+        layout3.addWidget(self.trialComboBox,4,4,1,2)
         QObject.connect(self.statusComboBox, SIGNAL('currentIndexChanged(int)'), self.statusComboChanged)
         self.columnGroupBox.setLayout(layout3)
 
     def createParsingOptionsGroup(self):
         self.parsingGroupBox = QGroupBox("Parsing Options")
-        self.parsingGroupBox.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
+        self.parsingGroupBox.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Preferred)
         layout2 = QVBoxLayout()
+        layout2.setAlignment(Qt.AlignTop)
         self.headerCheckBox = QCheckBox('First Row Header')
         QObject.connect(self.headerCheckBox, SIGNAL('stateChanged(int)'), self.refreshDataTable)
         self.delimTabCheckBox = QCheckBox('Tab Delim')
@@ -161,15 +168,15 @@ class PyeTracker(QMainWindow):
         layout3 = QGridLayout()
         layout3.addWidget(QLabel('Comment Char:'),0,0)
         self.commentLineEdit = QLineEdit('#')
-        self.commentLineEdit.setFixedWidth(self.metrics.width('Z')*18)
+        #self.commentLineEdit.setMinimumWidth(self.metrics.width('Z')*18)
         layout3.addWidget(self.commentLineEdit,0,1)
         layout3.addWidget(QLabel('Quote:'),1,0)
         self.quoteLineEdit = QLineEdit('"')
-        self.quoteLineEdit.setFixedWidth(self.metrics.width('Z')*18)
+        #self.quoteLineEdit.setMinimumWidth(self.metrics.width('Z')*18)
         layout3.addWidget(self.quoteLineEdit,1,1)
         layout3.addWidget(QLabel('Cleanup Regex:'),2,0)
         self.cleanupLineEdit = QLineEdit('^\(|\)$')
-        self.cleanupLineEdit.setFixedWidth(self.metrics.width('Z')*18)
+        #self.cleanupLineEdit.setMinimumWidth(self.metrics.width('Z')*18)
         layout3.addWidget(self.cleanupLineEdit,2,1)
         layout2.addWidget(self.headerCheckBox)
         layout2.addWidget(self.delimTabCheckBox)
@@ -183,17 +190,21 @@ class PyeTracker(QMainWindow):
         self.parsingGroupBox.setLayout(layout2)
 
     def statusComboChanged(self, index):
-        if index>0:
+        """if index>0:
             index -= 1
             try:
-                percentGood = sum([float(data[index]) for data in self.data]) / len(self.data) * 100.0
+                count = 0
+                for data in self.data:
+                    if eval(float(data[index])+self.comparisonComboBox.itemText(self.comparisonComboBox.currentIndex())+
+                percentGood = sum([float(data[index]) ) / len(self.data) * 100.0
                 self.statsPercentGood.setText('%.2f%%' % (percentGood))
             except ValueError, e:
                 self.statusComboBox.setCurrentIndex(0)
                 self.setStatusbarMessage('Error: "%s"' % (str(e)))
                 self.statsPercentGood.setText('NA')
         else:
-            self.statsPercentGood.setText('NA')
+            self.statsPercentGood.setText('NA')"""
+        pass
 
     def createAction(self, text, menu, slot):
         action = QAction(text, self)
@@ -218,6 +229,7 @@ class PyeTracker(QMainWindow):
         self.statsLines.setText('NA')
         self.statsComments.setText('NA')
         self.filterByColumnValueAction.setEnabled(False)
+        self.undoAllAction.setEnabled(False)
 
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, 'Open file')
