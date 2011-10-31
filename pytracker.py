@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import division
+
 import sys, os, re, copy
 
 from PySide.QtCore import *
@@ -134,7 +136,7 @@ class PyeTracker(QMainWindow):
         self.timestampComboBox = QComboBox()
         self.comparisonComboBox = QComboBox()
         self.trialComboBox = QComboBox()
-        self.comparisonValue = QLineEdit()
+        self.comparisonValue = QLineEdit('1')
         #self.comparisonValue.setFixedWidth(self.metrics.width('Z')*4)
         self.comparisonComboBox.addItems(['==','<','<=','>','>='])
         #self.comparisonComboBox.setFixedWidth(self.metrics.width('Z')*6)
@@ -190,21 +192,22 @@ class PyeTracker(QMainWindow):
         self.parsingGroupBox.setLayout(layout2)
 
     def statusComboChanged(self, index):
-        """if index>0:
+        if index>0:
             index -= 1
             try:
                 count = 0
-                for data in self.data:
-                    if eval(float(data[index])+self.comparisonComboBox.itemText(self.comparisonComboBox.currentIndex())+
-                percentGood = sum([float(data[index]) ) / len(self.data) * 100.0
+                data = self.datatableModel.getData()
+                for d in data:
+                    if eval('%f %s %f' % (float(d[index]), self.comparisonComboBox.itemText(self.comparisonComboBox.currentIndex()), float(self.comparisonValue.text()))):
+                        count += 1
+                percentGood = count / len(data) * 100.0
                 self.statsPercentGood.setText('%.2f%%' % (percentGood))
             except ValueError, e:
                 self.statusComboBox.setCurrentIndex(0)
                 self.setStatusbarMessage('Error: "%s"' % (str(e)))
                 self.statsPercentGood.setText('NA')
         else:
-            self.statsPercentGood.setText('NA')"""
-        pass
+            self.statsPercentGood.setText('NA')
 
     def createAction(self, text, menu, slot):
         action = QAction(text, self)
