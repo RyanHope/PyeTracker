@@ -8,6 +8,11 @@ class DataModel(QAbstractTableModel):
         self.firstRowAsHeader = firstRowAsHeader
         self.arraydata = datain
         self.headerdata = ['Column %d'%i for i in range(1,len(self.arraydata[0])+1)]
+        self.columns = 0
+        for row in self.arraydata:
+            l = len(row)
+            if l > self.columns:
+                self.columns = l
 
     def rowCount(self, parent=None):
         if self.arraydata:
@@ -19,10 +24,7 @@ class DataModel(QAbstractTableModel):
             return 0
 
     def columnCount(self, parent=None):
-        if self.arraydata:
-            return len(self.arraydata[0])
-        else:
-            return 0
+        return self.columns
 
     def getHeader(self):
         if self.firstRowAsHeader:
@@ -52,13 +54,15 @@ class DataModel(QAbstractTableModel):
             pass
         return None
 
-    def headerData(self, col, orientation, role):
+    def headerData(self, section, orientation, role):
         try:
             if orientation == Qt.Horizontal and role == Qt.DisplayRole:
                 if self.firstRowAsHeader:
-                    return self.arraydata[0][col]
+                    return self.arraydata[0][section]
                 else:
-                    return self.headerdata[col]
+                    return self.headerdata[section]
+            elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+                return section+1
         except IndexError:
             pass
         return None

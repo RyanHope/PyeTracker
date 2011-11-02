@@ -1,0 +1,4 @@
+* Add tree view for opened data, expand to show trials/segments
+* Make generic data viewer that works for gaze data or fixation data
+* Move parsing options to its own dialog box, preview first 5 rows to show affect
+  of each parsing option
