@@ -30,7 +30,8 @@ class PyeTracker(QMainWindow):
         self.menuBar.addMenu(self.fileMenu)
 
         self.helpMenu = QMenu("&Help", self)
-        self.helpAction = self.createAction("&About", self.helpMenu, self.about)
+        self.aboutAction = self.createAction("&About", self.helpMenu, self.about)
+        self.aboutAction.setMenuRole(QAction.NoRole)
         self.menuBar.addMenu(self.helpMenu)
 
         self.setStatusBar(QStatusBar())
@@ -59,6 +60,8 @@ class PyeTracker(QMainWindow):
         self.setGeometry(0,0,600,300)
 
         self.show()
+        self.activateWindow()
+        self.raise_()
 
         screen = QDesktopWidget().screenGeometry()
         size = self.geometry()
