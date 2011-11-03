@@ -99,6 +99,22 @@ class ParseDlg(QDialog):
         
         otherBox.setLayout(otherBoxLayout)
         
+        filterBox = QGroupBox('Sample Filter')
+        filterBoxLayout = QGridLayout()
+        filterBoxLayout.setHorizontalSpacing(60)
+        
+        filterBoxLayout.addWidget(QLabel('Column'),0,0)
+        self.columnFilterComboBox = QComboBox()
+        filterBoxLayout.addWidget(self.columnFilterComboBox,1,0)
+        filterBoxLayout.addWidget(QLabel('Sample Indicator'),2,0)
+        self.sampleIndicatorComboBox = QComboBox()
+        self.sampleIndicatorComboBox.setEnabled(False)
+        filterBoxLayout.addWidget(self.sampleIndicatorComboBox,3,0)
+        QObject.connect(self.columnFilterComboBox, SIGNAL('currentIndexChanged(int)'), self.filterColChanged)
+        QObject.connect(self.sampleIndicatorComboBox, SIGNAL('currentIndexChanged(int)'), self.sampleIndicatorChanged)
+        
+        filterBox.setLayout(filterBoxLayout)
+        
         columnBox = QGroupBox('Column Options')
         columnBoxLayout = QGridLayout()
         columnBoxLayout.setHorizontalSpacing(60)
@@ -141,10 +157,11 @@ class ParseDlg(QDialog):
 
         mainLayout.addWidget(importBox,0,0)
         mainLayout.addWidget(separatorBox,0,1)
-        mainLayout.addWidget(otherBox,1,0,1,2)
-        mainLayout.addWidget(columnBox,2,0,1,2)
-        mainLayout.addWidget(previewBox,3,0,1,2)
-        mainLayout.addWidget(buttonBox,4,0,1,2)
+        mainLayout.addWidget(otherBox,1,1)
+        mainLayout.addWidget(filterBox,1,0)
+        mainLayout.addWidget(columnBox,3,0,1,2)
+        mainLayout.addWidget(previewBox,4,0,1,2)
+        mainLayout.addWidget(buttonBox,5,0,1,2)
         
         self.delimTab.setChecked(True)
         
@@ -165,6 +182,30 @@ class ParseDlg(QDialog):
         #self.setFixedSize(self.width(),self.height())
         
         self.updatePreview()
+    
+    def sampleIndicatorChanged(self, index):
+        self.updatePreview()
+        
+    def filterColChanged(self, index):
+        if index>0:
+            index -= 1
+            self.sampleIndicatorComboBox.setEnabled(True)
+            items = []
+            data = self.parseData(tmp=True)
+            if self.headerCheckBox.isChecked():
+                data = data[1:]
+            for x in data:
+                try:
+                    items.append(x[index])
+                except IndexError:
+                    pass
+            items = list(frozenset(items))
+            items.insert(0,'')
+            self.sampleIndicatorComboBox.clear()
+            self.sampleIndicatorComboBox.addItems(items)
+        else:
+            self.sampleIndicatorComboBox.clear()
+            self.sampleIndicatorComboBox.setEnabled(False)
         
     def textChanged(self):
         if len(self.textLineEdit.text()) == 1:
@@ -174,7 +215,7 @@ class ParseDlg(QDialog):
         if len(self.otherLineEdit.text()) == 1:
             self.updatePreview()
         
-    def parseData(self, preview=False, progress_cb=None):
+    def parseData(self, preview=False, progress_cb=None, tmp=False):
         
         reg0 = None
         if self.skipCommentsCheckBox.isChecked() and self.commentLineEdit.text():
@@ -207,11 +248,24 @@ class ParseDlg(QDialog):
             delim = '\t'
         elif self.delimOther.isChecked() and self.otherLineEdit.text():
             delim = str(self.otherLineEdit.text())
-                
-        self.data = [line for line in csv.reader(lines, delimiter=delim, quotechar=quotechar)]
+            
+        tmpData = None
+        if not tmp and self.columnFilterComboBox.currentIndex() > 0 and self.sampleIndicatorComboBox.currentIndex() > 0:
+            col = self.columnFilterComboBox.itemData(self.columnFilterComboBox.currentIndex())
+            val = self.sampleIndicatorComboBox.itemText(self.sampleIndicatorComboBox.currentIndex())
+            if self.headerCheckBox.isChecked():
+                tmpData = [line for i,line in enumerate(csv.reader(lines, delimiter=delim, quotechar=quotechar)) if i==0 or line[col] ==  val]
+            else:
+                tmpData = [line for line in csv.reader(lines, delimiter=delim, quotechar=quotechar) if line[col] ==  val]
+        else:
+            tmpData = [line for line in csv.reader(lines, delimiter=delim, quotechar=quotechar)]
+        if not tmp:
+            self.data = tmpData
+        return tmpData
+            
         
     def updatePreview(self):
-        self.parseData(True)
+        self.parseData(preview=True)
         self.refreshDataTable()
     
     def doParse(self):
@@ -236,17 +290,21 @@ class ParseDlg(QDialog):
         headers = copy.copy(self.datatableModel.getHeader())
         headers.insert(0,None)
         if headers != self.header:
-            self.statusCombo.clear()
-            self.statusCombo.addItems(headers)
-            self.gazexCombo.clear()
-            self.gazexCombo.addItems(headers)
-            self.gazeyCombo.clear()
-            self.gazeyCombo.addItems(headers)
-            self.timestampCombo.clear()
-            self.timestampCombo.addItems(headers)
-            self.trialCombo.clear()
-            self.trialCombo.addItems(headers)
+            self.updateHeaderCombo(self.statusCombo, headers)
+            self.updateHeaderCombo(self.gazexCombo, headers)
+            self.updateHeaderCombo(self.gazeyCombo, headers)
+            self.updateHeaderCombo(self.timestampCombo, headers)
+            self.updateHeaderCombo(self.trialCombo, headers)
+            self.updateHeaderCombo(self.columnFilterComboBox, headers)
             self.header = headers
+            
+    def updateHeaderCombo(self, combobox, headers):
+        combobox.clear()
+        for i,v in enumerate(headers):
+            if i == 0:
+                combobox.addItem(v,None)
+            else:
+                combobox.addItem(v,i-1)
     
     def getSegments(self, status_cb=None):
         segments = []
@@ -282,7 +340,7 @@ class ParseDlg(QDialog):
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
-    dlg = ParseDlg('test4.txt')
+    dlg = ParseDlg('300fe9ab_2011-11-2_16-58-41.log')
     if dlg.exec_():
         dlg.parseData(progress_cb=lambda a,b: sys.stdout.write("%.3f\n" % (a/b*100)))
         dlg.updateModel()

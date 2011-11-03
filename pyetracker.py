@@ -98,11 +98,6 @@ class PyeTracker(QMainWindow):
                 dlg.updateModel()
                 self.filesmodel = TreeModel(dlg.getSegments())
                 self.files.setModel(self.filesmodel)
-                self.files.resizeColumnToContents(0)
-                #print '~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-                #print data['filename'], data['firstRowIsHeader'],len(data['segments'])
-                #for i, seg in enumerate(data['segments']):
-                #    print '\t', i+1,len(seg['data']),sum(seg['status'])/len(seg['status'])*100
                 self.updateProgress(None, None, 'Finished')
 
 if __name__ == '__main__':
