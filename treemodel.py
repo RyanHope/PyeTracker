@@ -110,49 +110,12 @@ class TreeModel(QAbstractItemModel):
 
         return parentItem.childCount()
 
-    def setupModelData(self, data, root):
+    def setupModelData(self, files, root):
         
-        if not data:
-            return
-        
-        parent = TreeItem((data['filename'],'',''), root)
-        for seg in data['segments']:
-            parent.appendChild(TreeItem((str(seg['trial']),str(len(seg['data'])),str(sum(seg['status'])/len(seg['status'])*100)), parent))
-        root.appendChild(parent)
-        
-        """
-        indentations = [0]
-
-        number = 0
-
-        while number < len(lines):
-            position = 0
-            while position < len(lines[number]):
-                if lines[number][position] != ' ':
-                    break
-                position += 1
-
-            lineData = lines[number][position:].strip()
-
-            if lineData:
-                # Read the column data from the rest of the line.
-                columnData = [s for s in lineData.split('\t') if s]
-
-                if position > indentations[-1]:
-                    # The last child of the current parent is now the new
-                    # parent unless the current parent has no children.
-
-                    if parents[-1].childCount() > 0:
-                        parents.append(parents[-1].child(parents[-1].childCount() - 1))
-                        indentations.append(position)
-
-                else:
-                    while position < indentations[-1] and len(parents) > 0:
-                        parents.pop()
-                        indentations.pop()
-
-                # Append a new item to the current parent's list of children.
-                parents[-1].appendChild(TreeItem(columnData, parents[-1]))
-
-            number += 1
-            """
+        for file in files:
+            parent = TreeItem((file,'',''), self.rootItem)
+            data = files[file]
+            for seg in data['segments']:
+                print seg['trial']
+                parent.appendChild(TreeItem((str(seg['trial']),str(len(seg['data'])),'%.2f' % (sum(seg['status'])/len(seg['status'])*100)), parent))
+            self.rootItem.appendChild(parent)

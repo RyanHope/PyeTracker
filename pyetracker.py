@@ -43,6 +43,7 @@ class PyeTracker(QMainWindow):
         
         self.filesmodel = TreeModel({})
         
+        self.filedata = {}
         self.files = QTreeView()
         self.files.setModel(self.filesmodel)
         mainLayout.addWidget(self.files)
@@ -96,7 +97,8 @@ class PyeTracker(QMainWindow):
             if dlg.exec_():
                 dlg.parseData(progress_cb=lambda a,b: self.updateProgress(a, b, 'Importing data...'))
                 dlg.updateModel()
-                self.filesmodel = TreeModel(dlg.getSegments())
+                self.filedata.update(dlg.getSegments())
+                self.filesmodel = TreeModel(self.filedata)
                 self.files.setModel(self.filesmodel)
                 self.updateProgress(None, None, 'Finished')
 

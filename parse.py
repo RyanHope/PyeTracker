@@ -333,9 +333,7 @@ class ParseDlg(QDialog):
             current.append(data[line])
             line += 1
         segments.append({'trial': trial, 'data': current, 'status': status})
-        return {'filename': self.filename,
-                'segments': segments,
-                'firstRowIsHeader': self.headerCheckBox.isChecked()}
+        return {self.filename: {'segments': segments, 'firstRowIsHeader': self.headerCheckBox.isChecked()}}
         
 if __name__ == '__main__':
 
